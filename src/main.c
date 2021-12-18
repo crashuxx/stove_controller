@@ -5,14 +5,19 @@
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
+#include "hardware/uart.h"
 #include "pico/binary_info.h"
 
+#include "state.h"
 #include "lib/lcd_1602_i2c/lcd_1602_i2c.h"
 #include "lib/mcp3208/mcp3208.h"
 #include "lib/kty/kty.h"
+#include "lib/estyma/estyma.h"
 
 #define SPI_PORT spi0
 #define READ_BIT 0x80
+
+temperatures_t temperatures;
 
 
 void init_i2c() {
@@ -49,23 +54,6 @@ void init_spi() {
     bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI CS"));
 }
 
-#define TEMPERATURE_SAMPLES 16
-
-struct temperatures_s {
-    int8_t stove[TEMPERATURE_SAMPLES];
-    int8_t heating[TEMPERATURE_SAMPLES];
-    int8_t heating_return[TEMPERATURE_SAMPLES];
-    int8_t water[TEMPERATURE_SAMPLES];
-    int8_t smoke[TEMPERATURE_SAMPLES];
-
-    uint8_t i;
-
-    int8_t stove_avr;
-    int8_t heating_avr;
-    int8_t heating_return_avr;
-    int8_t water_avr;
-    int8_t smoke_avr;
-} temperatures;
 
 uint inline potential_differencef(uint r_value, float resolution, float r1) {
     return r_value/(resolution-r_value)*r1;
@@ -101,25 +89,47 @@ void temperatures_calculate_avr() {
 void temperatures_read_all() {
     uint8_t i = temperatures.i;
 
-    temperatures.stove[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
-    temperatures.heating[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(1), 4095, 2000));
-    temperatures.heating_return[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(2), 4095, 2000));
-    temperatures.water[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(3), 4095, 2000));
-    temperatures.smoke[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(7), 4095, 2000));
+    temperatures.stove[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(7), 4095, 10000));
+    temperatures.heating[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(6), 4095, 10000));
+    temperatures.heating_return[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(5), 4095, 10000));
+    temperatures.water[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(4), 4095, 10000));
+    temperatures.smoke[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
 
     temperatures.i++;
     if (temperatures.i >= TEMPERATURE_SAMPLES) temperatures.i = 0;
 }
 
+#define UART_ID uart0
+#define BAUD_RATE 9600
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
+
 int main() {
-    init_i2c();
+    //init_i2c();
     init_spi();
-    lcd_init();
+    uart_init(UART_ID, BAUD_RATE);
+    //lcd_init();
+
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+
+    gpio_init(12);
+    gpio_set_dir(12, GPIO_OUT);
+    gpio_put(12, 1);
+    gpio_init(13);
+    gpio_set_dir(13, GPIO_OUT);
+    gpio_put(13, 1);
+    gpio_init(14);
+    gpio_set_dir(14, GPIO_OUT);
+    gpio_put(14, 1);
+    gpio_init(15);
+    gpio_set_dir(15, GPIO_OUT);
+    gpio_put(15, 1);
 
     memset(&temperatures, 0, sizeof(temperatures));
 
-    lcd_set_cursor(0, 0);
-    lcd_string("Loading...");
+    //lcd_set_cursor(0, 0);
+    //lcd_string("Loading...");
 
     int stove_sum = 0;
     int heating_sum = 0;
@@ -131,31 +141,122 @@ int main() {
     }
 
     temperatures_calculate_avr();
- 
-
     sleep_ms(1000);
+
+    stove_state_t stove_state = BURNING;
+    
+    bool co_pump = false;
+    bool cw_pump = false;
+    bool feeder_state = false;
+    uint64_t feeder_time = time_us_64() + 5 * 1000000;
 
     while (1) {
         temperatures_read_all();
         temperatures_calculate_avr();
 
-        uint value = mcp3208_read_raw(0);
-        char tmps1[16];
-        uint r = potential_difference(value, 4095, 2000);
+        stove_state_t stove_state_last = stove_state;
+        stove_state = update_state(stove_state, temperatures);
+        //stove_state = BURNING;
 
-        sprintf(tmps1, "Temp: %d C    ", temperatures.stove_avr);
-        lcd_set_cursor(0, 0);
-        lcd_string(tmps1);
+        if (stove_state_last != stove_state) {
+            feeder_state = false;
+        }
+
+        switch(stove_state) {
+            default:
+            case OFF: 
+            case EXCTINCTION:
+                //gpio_put(12, 1);
+                feeder_state = false;
+                gpio_put(13, 1);
+                gpio_put(14, 1); //co pump
+                gpio_put(15, 1); //cw pump
+                break;
+
+            case SETTING_FIRE:
+                gpio_put(13, 0); // fan
+                gpio_put(14, 1); //co pump
+                gpio_put(15, 1);
+
+                if (feeder_state) {
+                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                        feeder_state = false;
+                    }
+                } else {
+                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                        feeder_state = true;
+                        feeder_time = time_us_64();
+                    }
+                }
+
+                break;
+
+            case BURNING:
+                gpio_put(13, 0); // fan
+                gpio_put(14, 0); //co pump
+
+                if (feeder_state) {
+                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                        feeder_state = false;
+                    }
+                } else {
+                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                        feeder_state = true;
+                        feeder_time = time_us_64();
+                    }
+                }
+
+                if (temperatures.water_avr < 42) {
+                    gpio_put(15, 0); //cw pump
+                } else {
+                    gpio_put(15, 1); //cw pump
+                }
+
+                break;
+
+            case AFTERBURNING:
+                feeder_state = false;
+                gpio_put(13, 0); // fan
+                gpio_put(14, 0); //co pump
+
+                if (temperatures.water_avr < 42) {
+                    gpio_put(15, 0); //cw pump
+                } else {
+                    gpio_put(15, 1); //cw pump
+                }
+                break;
+
+            case COOLING:
+                feeder_state = false;
+                gpio_put(13, 1);
+                gpio_put(14, 0); //co pump
+
+                if (temperatures.water_avr < 42) {
+                    gpio_put(15, 0); //cw pump
+                } else {
+                    gpio_put(15, 1); //cw pump
+                }
+
+                break;
+        }
+
+        gpio_put(12, !feeder_state);
+
+        char tmps1[128];
+        char tmps2[16];
+
+        //sprintf(tmps1, "Temp: %d C    ", temperatures.stove_avr);
+        //lcd_set_cursor(0, 0);
+        //lcd_string(tmps1);
+
+        //sprintf(tmps1, "State: %d C    ", stove_state);
+        //lcd_set_cursor(1, 0);
+        //lcd_string(tmps1);
+
+        sprintf(tmps1, "s: %3d h: %3d hr: %3d w: %3d sm: %3d st:%d\n", temperatures.stove_avr, temperatures.heating_avr, temperatures.heating_return_avr, temperatures.water_avr, temperatures.smoke_avr, stove_state);
+        uart_puts(UART_ID, tmps1);
 
         sleep_ms(500);
-/*        for (int m = 0; m < sizeof(message) / sizeof(message[0]); m += LCD_MAX_LINES) {
-            for (int line = 0; line < LCD_MAX_LINES; line++) {
-                lcd_set_cursor(line, (LCD_MAX_CHARS / 2) - strlen(message[m + line]) / 2);
-                lcd_string(message[m + line]);
-            }
-            sleep_ms(2000);
-            lcd_clear();
-        }*/
     }
 
     return 0;

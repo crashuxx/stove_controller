@@ -31,7 +31,7 @@ const int32_t estyma_ct2_resistance_temperatue[] = {
     237, 153, 140, 150
 };
 
-int8_t estyma_ct2_valid_resistance(int resistance) {
+int8_t estyma_ct2_valid_resistance(uint resistance) {
     if(resistance > estyma_ct2_resistance_temperatue[0]) {
         return -1;
     } else if(resistance < estyma_ct2_resistance_temperatue[RESOLUTION*(N-1) + R_R]) {
@@ -41,12 +41,12 @@ int8_t estyma_ct2_valid_resistance(int resistance) {
     return 0;
 }
 
-int estyma_ct2_temperature(int resistance) {
-    for(int8_t i = 0; i < (RESOLUTION*N); i=+N) {
+int estyma_ct2_temperature(uint resistance) {
+    for(int8_t i = 0; i < (RESOLUTION*N); i+=N) {
         if(resistance > estyma_ct2_resistance_temperatue[i+R_R]) {
-            int resistance_range = estyma_ct2_resistance_temperatue[i+R_L] - estyma_ct2_resistance_temperatue[i+R_R];
-            int temperature_range = estyma_ct2_resistance_temperatue[i+T_R] - estyma_ct2_resistance_temperatue[i+T_L];
-            double dt = (resistance - estyma_ct2_resistance_temperatue[i+R_R]) / resistance_range * temperature_range;
+            float resistance_range = estyma_ct2_resistance_temperatue[i+R_L] - estyma_ct2_resistance_temperatue[i+R_R];
+            float temperature_range = estyma_ct2_resistance_temperatue[i+T_R] - estyma_ct2_resistance_temperatue[i+T_L];
+            float dt = ((float)(resistance - estyma_ct2_resistance_temperatue[i+R_R])) / resistance_range * temperature_range;
             return estyma_ct2_resistance_temperatue[i+T_R] - dt;
         }
     }
