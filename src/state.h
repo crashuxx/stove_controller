@@ -25,8 +25,8 @@ typedef enum stove_state {
     OFF,
     SETTING_FIRE,
     BURNING,
-    AFTERBURNING,
     COOLING,
+    PASSIVE,
     EXCTINCTION
 
 }  stove_state_t;

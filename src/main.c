@@ -8,31 +8,19 @@
 #include "hardware/uart.h"
 #include "pico/binary_info.h"
 
+#include "common.h"
 #include "state.h"
 #include "lib/lcd_1602_i2c/lcd_1602_i2c.h"
 #include "lib/mcp3208/mcp3208.h"
 #include "lib/kty/kty.h"
 #include "lib/estyma/estyma.h"
+#include "sm.h"
 
 #define SPI_PORT spi0
 #define READ_BIT 0x80
 
 temperatures_t temperatures;
 
-
-void init_i2c() {
-#if !defined(i2c_default) || !defined(PICO_DEFAULT_I2C_SDA_PIN) || !defined(PICO_DEFAULT_I2C_SCL_PIN)
-    #error Requires a board with I2C pins
-#endif
-    
-    i2c_init(i2c_default, 100 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
-    // Make the I2C pins available to picotool
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
-}
 
 void init_spi() {
 #if !defined(spi_default) || !defined(PICO_DEFAULT_SPI_RX_PIN) || !defined(PICO_DEFAULT_SPI_TX_PIN) || !defined(PICO_DEFAULT_SPI_SCK_PIN)
@@ -55,10 +43,20 @@ void init_spi() {
 }
 
 
+#define UART_ID uart0
+#define BAUD_RATE 9600
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
+
+void init_uart() {
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+}
+
 uint inline potential_differencef(uint r_value, float resolution, float r1) {
     return r_value/(resolution-r_value)*r1;
 }
-
 
 uint inline potential_difference(uint r_value, uint resolution, uint r1) {
     return potential_differencef(r_value, (float)resolution, (float)r1);
@@ -99,19 +97,12 @@ void temperatures_read_all() {
     if (temperatures.i >= TEMPERATURE_SAMPLES) temperatures.i = 0;
 }
 
-#define UART_ID uart0
-#define BAUD_RATE 9600
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
 
 int main() {
     //init_i2c();
     init_spi();
-    uart_init(UART_ID, BAUD_RATE);
-    //lcd_init();
-
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    init_uart();
+    
 
     gpio_init(12);
     gpio_set_dir(12, GPIO_OUT);
@@ -143,12 +134,13 @@ int main() {
     temperatures_calculate_avr();
     sleep_ms(1000);
 
-    stove_state_t stove_state = BURNING;
+    stove_state_t stove_state = SETTING_FIRE;
     
     bool co_pump = false;
     bool cw_pump = false;
     bool feeder_state = false;
     uint64_t feeder_time = time_us_64() + 5 * 1000000;
+    uint64_t msg_time = time_us_64();
 
     while (1) {
         temperatures_read_all();
@@ -179,11 +171,11 @@ int main() {
                 gpio_put(15, 1);
 
                 if (feeder_state) {
-                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 3 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 3 * 1000000 + 30 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -196,11 +188,11 @@ int main() {
                 gpio_put(14, 0); //co pump
 
                 if (feeder_state) {
-                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 6 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 6 * 1000000 + 30 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -214,21 +206,9 @@ int main() {
 
                 break;
 
-            case AFTERBURNING:
-                feeder_state = false;
-                gpio_put(13, 0); // fan
-                gpio_put(14, 0); //co pump
-
-                if (temperatures.water_avr < 42) {
-                    gpio_put(15, 0); //cw pump
-                } else {
-                    gpio_put(15, 1); //cw pump
-                }
-                break;
-
             case COOLING:
                 feeder_state = false;
-                gpio_put(13, 1);
+                gpio_put(13, 1); // fan
                 gpio_put(14, 0); //co pump
 
                 if (temperatures.water_avr < 42) {
@@ -238,12 +218,36 @@ int main() {
                 }
 
                 break;
+            
+            case PASSIVE:
+                gpio_put(13, 1); // fan
+                gpio_put(14, 0); //co pump
+
+                if (feeder_state) {
+                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                        feeder_state = false;
+                    }
+                } else {
+                    if ((feeder_time + 8 * 1000000 + 120 * 1000000) <= time_us_64()) {
+                        feeder_state = true;
+                        feeder_time = time_us_64();
+                    }
+                }
+
+                if (temperatures.water_avr < 42) {
+                    gpio_put(15, 0); //cw pump
+                } else {
+                    gpio_put(15, 1); //cw pump
+                }
+
+                break;
+
         }
 
         gpio_put(12, !feeder_state);
 
         char tmps1[128];
-        char tmps2[16];
+        //char tmps2[16];
 
         //sprintf(tmps1, "Temp: %d C    ", temperatures.stove_avr);
         //lcd_set_cursor(0, 0);
@@ -253,8 +257,11 @@ int main() {
         //lcd_set_cursor(1, 0);
         //lcd_string(tmps1);
 
-        sprintf(tmps1, "s: %3d h: %3d hr: %3d w: %3d sm: %3d st:%d\n", temperatures.stove_avr, temperatures.heating_avr, temperatures.heating_return_avr, temperatures.water_avr, temperatures.smoke_avr, stove_state);
-        uart_puts(UART_ID, tmps1);
+        if((msg_time + 10 * 1000000) <= time_us_64()) {
+            sprintf(tmps1, "s: %3d h: %3d hr: %3d w: %3d sm: %3d st:%d\n", temperatures.stove_avr, temperatures.heating_avr, temperatures.heating_return_avr, temperatures.water_avr, temperatures.smoke_avr, stove_state);
+            uart_puts(UART_ID, tmps1);
+            msg_time = time_us_64();
+        }
 
         sleep_ms(500);
     }

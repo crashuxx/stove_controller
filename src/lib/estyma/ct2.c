@@ -34,7 +34,7 @@ const int32_t estyma_ct2_resistance_temperatue[] = {
 int8_t estyma_ct2_valid_resistance(uint resistance) {
     if(resistance > estyma_ct2_resistance_temperatue[0]) {
         return -1;
-    } else if(resistance < estyma_ct2_resistance_temperatue[RESOLUTION*(N-1) + R_R]) {
+    } else if(resistance < estyma_ct2_resistance_temperatue[(RESOLUTION-1)*N + R_R]) {
         return 1;
     }
 
