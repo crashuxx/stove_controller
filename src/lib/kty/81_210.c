@@ -4,9 +4,9 @@
 
 #define RESOLUTION 23
 #define R_L 0
-#define R_R 1
+#define R_H 1
 #define T_L 2
-#define T_R 3
+#define T_H 3
 #define N 4
 
 const int32_t kty81_210_resistance_temperatue[] = {
@@ -35,21 +35,21 @@ const int32_t kty81_210_resistance_temperatue[] = {
     4166, 4280, 140, 150
 };
 
-int8_t kty81_210_valid_resistance(uint resistance) {
-    if(resistance < kty81_210_resistance_temperatue[0]) {
+int8_t kty81_210_valid_resistance(unsigned int resistance) {
+    if(resistance < kty81_210_resistance_temperatue[R_L]) {
         return -1;
-    } else if(resistance > kty81_210_resistance_temperatue[RESOLUTION*(N-1) + R_R]) {
+    } else if(resistance > kty81_210_resistance_temperatue[(RESOLUTION-1)*N + R_H]) {
         return 1;
     }
 
     return 0;
 }
 
-int kty81_210_temperature(uint resistance) {
+int kty81_210_temperature(unsigned int resistance) {
     for(int8_t i = 0; i < (RESOLUTION*N); i+=N) {
-        if(resistance < kty81_210_resistance_temperatue[i+R_R]) {
-            float resistance_range = kty81_210_resistance_temperatue[i+R_R] - kty81_210_resistance_temperatue[i+R_L];
-            float temperature_range = kty81_210_resistance_temperatue[i+T_R] - kty81_210_resistance_temperatue[i+T_L];
+        if(resistance <= kty81_210_resistance_temperatue[i+R_H]) {
+            float resistance_range = kty81_210_resistance_temperatue[i+R_H] - kty81_210_resistance_temperatue[i+R_L];
+            float temperature_range = kty81_210_resistance_temperatue[i+T_H] - kty81_210_resistance_temperatue[i+T_L];
             float dt = ((float)(resistance - kty81_210_resistance_temperatue[i+R_L])) / resistance_range * temperature_range;
             return kty81_210_resistance_temperatue[i+T_L] + dt;
         }
