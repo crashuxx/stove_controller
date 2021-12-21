@@ -14,7 +14,6 @@
 #include "lib/mcp3208/mcp3208.h"
 #include "lib/kty/kty.h"
 #include "lib/estyma/estyma.h"
-#include "sm.h"
 
 #define SPI_PORT spi0
 #define READ_BIT 0x80

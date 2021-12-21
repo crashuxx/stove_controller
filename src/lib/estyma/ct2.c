@@ -2,10 +2,10 @@
 #include "estyma.h"
 
 #define RESOLUTION 20
-#define R_L 0
-#define R_R 1
+#define R_H 0
+#define R_L 1
 #define T_L 2
-#define T_R 3
+#define T_H 3
 #define N 4
 
 const int32_t estyma_ct2_resistance_temperatue[] = {
@@ -31,23 +31,23 @@ const int32_t estyma_ct2_resistance_temperatue[] = {
     237, 153, 140, 150
 };
 
-int8_t estyma_ct2_valid_resistance(uint resistance) {
-    if(resistance > estyma_ct2_resistance_temperatue[0]) {
+int8_t estyma_ct2_valid_resistance(unsigned int resistance) {
+    if(resistance > estyma_ct2_resistance_temperatue[R_H]) {
         return -1;
-    } else if(resistance < estyma_ct2_resistance_temperatue[(RESOLUTION-1)*N + R_R]) {
+    } else if(resistance < estyma_ct2_resistance_temperatue[(RESOLUTION-1)*N + R_L]) {
         return 1;
     }
 
     return 0;
 }
 
-int estyma_ct2_temperature(uint resistance) {
+int estyma_ct2_temperature(unsigned int resistance) {
     for(int8_t i = 0; i < (RESOLUTION*N); i+=N) {
-        if(resistance > estyma_ct2_resistance_temperatue[i+R_R]) {
-            float resistance_range = estyma_ct2_resistance_temperatue[i+R_L] - estyma_ct2_resistance_temperatue[i+R_R];
-            float temperature_range = estyma_ct2_resistance_temperatue[i+T_R] - estyma_ct2_resistance_temperatue[i+T_L];
-            float dt = ((float)(resistance - estyma_ct2_resistance_temperatue[i+R_R])) / resistance_range * temperature_range;
-            return estyma_ct2_resistance_temperatue[i+T_R] - dt;
+        if(resistance >= estyma_ct2_resistance_temperatue[i+R_L]) {
+            float resistance_range = estyma_ct2_resistance_temperatue[i+R_H] - estyma_ct2_resistance_temperatue[i+R_L];
+            float temperature_range = estyma_ct2_resistance_temperatue[i+T_H] - estyma_ct2_resistance_temperatue[i+T_L];
+            float dt = (resistance - estyma_ct2_resistance_temperatue[i+R_L]) / resistance_range * temperature_range;
+            return estyma_ct2_resistance_temperatue[i+T_H] - dt;
         }
     }
 

@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-int8_t estyma_ct2_valid_resistance(uint resistance);
-int estyma_ct2_temperature(uint resistance);
+int8_t estyma_ct2_valid_resistance(unsigned int resistance);
+int estyma_ct2_temperature(unsigned int resistance);
 
 #ifdef __cplusplus
 }
