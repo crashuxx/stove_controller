@@ -8,6 +8,9 @@ TEST(Estyma, ct2_temperature) {
   EXPECT_EQ(-40, estyma_ct2_temperature(329927));
   EXPECT_EQ(150, estyma_ct2_temperature(153));
 
+  EXPECT_EQ(90, estyma_ct2_temperature(881));
+  EXPECT_EQ(89, estyma_ct2_temperature(914));
+  EXPECT_EQ(86, estyma_ct2_temperature(1013));
   EXPECT_EQ(82, estyma_ct2_temperature(1131));
   EXPECT_EQ(80, estyma_ct2_temperature(1211));
   EXPECT_EQ(70, estyma_ct2_temperature(1695));

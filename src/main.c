@@ -170,11 +170,11 @@ int main() {
                 gpio_put(15, 1);
 
                 if (feeder_state) {
-                    if ((feeder_time + 3 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 4 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 3 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 4 * 1000000 + 30 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -187,11 +187,11 @@ int main() {
                 gpio_put(14, 0); //co pump
 
                 if (feeder_state) {
-                    if ((feeder_time + 6 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 6 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -223,11 +223,11 @@ int main() {
                 gpio_put(14, 0); //co pump
 
                 if (feeder_state) {
-                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 10 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 8 * 1000000 + 120 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 10 * 1000000 + 120 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -261,6 +261,11 @@ int main() {
             uart_puts(UART_ID, tmps1);
             msg_time = time_us_64();
         }
+
+        // int rabt = MIN(uart_is_readable(UART_ID), 16);
+        // if (rabt > 0) {
+        //     uart_read_blocking()
+        // }
 
         sleep_ms(500);
     }

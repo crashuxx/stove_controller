@@ -18,10 +18,13 @@ FetchContent_MakeAvailable(googletest)
 # Now simply link against gtest or gtest_main as needed. Eg
 add_executable(utest 
     test.cc 
+    potential_difference.cc
     lib/estyma.cc
     lib/kty.cc
+    lib/pt.cc
     ../src/lib/estyma/ct2.c
     ../src/lib/kty/81_210.c
+    ../src/lib/pt/pt1000.c
 )
 target_link_libraries(utest gtest_main)
 add_test(NAME example_test COMMAND utest)

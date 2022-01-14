@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
     src/state.c
     src/lib/estyma/ct2.c
     src/lib/kty/81_210.c
+    src/lib/pt/pt1000.c
     src/lib/lcd_1602_i2c/lcd_1602_i2c.c
     src/lib/mcp3208/mcp3208.c
 )
