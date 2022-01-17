@@ -95,8 +95,8 @@ void temperatures_read_all() {
     temperatures.heating[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(6), 4095, 10000));
     temperatures.heating_return[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(5), 4095, 10000));
     temperatures.water[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(4), 4095, 10000));
-    temperatures.smoke[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(1), 4095, 2000));
-    temperatures.feeder[i] = ntc10kb3900k_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
+    temperatures.smoke[i] = ntc10k_b3900k_temperature(potential_difference(mcp3208_read_raw(1), 4095, 2000));
+    temperatures.feeder[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
 
     temperatures.i++;
     if (temperatures.i >= TEMPERATURE_SAMPLES) temperatures.i = 0;

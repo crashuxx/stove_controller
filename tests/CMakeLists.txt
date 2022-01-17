@@ -22,9 +22,11 @@ add_executable(utest
     lib/estyma.cc
     lib/kty.cc
     lib/pt.cc
+    lib/ntc.cc
     ../src/lib/estyma/ct2.c
     ../src/lib/kty/81_210.c
     ../src/lib/pt/pt1000.c
+    ../src/lib/ntc/ntc10k.c
 )
 target_link_libraries(utest gtest_main)
 add_test(NAME example_test COMMAND utest)

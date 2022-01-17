@@ -45,9 +45,9 @@ const int ntc10k_resistance_temperatue[] = {
 };
 
 int8_t ntc10k_b3900k_valid_resistance(unsigned int resistance) {
-    if(resistance < ntc10k_resistance_temperatue[R_B3900K]) {
+    if(resistance > ntc10k_resistance_temperatue[R_B3900K]) {
         return -1;
-    } else if(resistance > ntc10k_resistance_temperatue[(RESOLUTION-1)*N + R_B3900K]) {
+    } else if(resistance < ntc10k_resistance_temperatue[(RESOLUTION-1)*N + R_B3900K]) {
         return 1;
     }
 
@@ -55,15 +55,15 @@ int8_t ntc10k_b3900k_valid_resistance(unsigned int resistance) {
 }
 
 int ntc10k_b3900k_temperature(unsigned int resistance) {
-    if(resistance < ntc10k_resistance_temperatue[R_B3900K])
-        return ntc10k_resistance_temperatue[RESOLUTION+T] - 1;
+    if(resistance > ntc10k_resistance_temperatue[R_B3900K])
+        return ntc10k_resistance_temperatue[T] - 1;
 
     for(int8_t i = N; i < (RESOLUTION*N); i+=N) {
-        if(resistance <= ntc10k_resistance_temperatue[i+R_B3900K]) {
-            float resistance_range = ntc10k_resistance_temperatue[i+R_B3900K] - ntc10k_resistance_temperatue[i-N+R_B3900K];
+        if(resistance >= ntc10k_resistance_temperatue[i+R_B3900K]) {
+            float resistance_range =  ntc10k_resistance_temperatue[i-N+R_B3900K] - ntc10k_resistance_temperatue[i+R_B3900K];
             float temperature_range = ntc10k_resistance_temperatue[i+T] - ntc10k_resistance_temperatue[i-N+T];
-            float dt = ((float)(resistance - ntc10k_resistance_temperatue[i-N+R_B3900K])) / resistance_range * temperature_range;
-            return ntc10k_resistance_temperatue[i-N+T] + dt;
+            float dt = ((float)(resistance - ntc10k_resistance_temperatue[i+R_B3900K])) / resistance_range * temperature_range;
+            return ntc10k_resistance_temperatue[i+T] - dt;
         }
     }
 
