@@ -10,6 +10,7 @@ typedef struct temperatures_s {
     int8_t heating[TEMPERATURE_SAMPLES];
     int8_t heating_return[TEMPERATURE_SAMPLES];
     int8_t water[TEMPERATURE_SAMPLES];
+    int8_t feeder[TEMPERATURE_SAMPLES];
     int8_t smoke[TEMPERATURE_SAMPLES];
 
     uint8_t i;
@@ -18,6 +19,7 @@ typedef struct temperatures_s {
     int8_t heating_avr;
     int8_t heating_return_avr;
     int8_t water_avr;
+    int8_t feeder_avr;
     int8_t smoke_avr;
 } temperatures_t;
 

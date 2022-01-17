@@ -13,6 +13,7 @@
 #include "lib/lcd_1602_i2c/lcd_1602_i2c.h"
 #include "lib/mcp3208/mcp3208.h"
 #include "lib/kty/kty.h"
+#include "lib/ntc/ntc.h"
 #include "lib/estyma/estyma.h"
 
 #define SPI_PORT spi0
@@ -58,6 +59,7 @@ uint inline potential_differencef(uint r_value, float resolution, float r1) {
 }
 
 uint inline potential_difference(uint r_value, uint resolution, uint r1) {
+    if(resolution == r_value) return 0;
     return potential_differencef(r_value, (float)resolution, (float)r1);
 }
 
@@ -66,13 +68,15 @@ void temperatures_calculate_avr() {
     int heating_sum = 0;
     int heating_return_sum = 0;
     int water_sum = 0;
-    int smoke_sum = 0;
+    int feeder_sum = 0;
+    int smoke_sum = 0;    
 
     for(int8_t i = 0; i < TEMPERATURE_SAMPLES; i++) {
         stove_sum += temperatures.stove[i];
         heating_sum += temperatures.heating[i];
         heating_return_sum += temperatures.heating_return[i];
         water_sum += temperatures.water[i];
+        feeder_sum += temperatures.feeder[i];
         smoke_sum += temperatures.smoke[i];
     }
 
@@ -80,6 +84,7 @@ void temperatures_calculate_avr() {
     temperatures.heating_avr = heating_sum/TEMPERATURE_SAMPLES;
     temperatures.heating_return_avr = heating_return_sum/TEMPERATURE_SAMPLES;
     temperatures.water_avr = water_sum/TEMPERATURE_SAMPLES;
+    temperatures.feeder_avr = feeder_sum/TEMPERATURE_SAMPLES; 
     temperatures.smoke_avr = smoke_sum/TEMPERATURE_SAMPLES;
 }
 
@@ -90,7 +95,8 @@ void temperatures_read_all() {
     temperatures.heating[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(6), 4095, 10000));
     temperatures.heating_return[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(5), 4095, 10000));
     temperatures.water[i] = estyma_ct2_temperature(potential_difference(mcp3208_read_raw(4), 4095, 10000));
-    temperatures.smoke[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
+    temperatures.smoke[i] = kty81_210_temperature(potential_difference(mcp3208_read_raw(1), 4095, 2000));
+    temperatures.feeder[i] = ntc10kb3900k_temperature(potential_difference(mcp3208_read_raw(0), 4095, 2000));
 
     temperatures.i++;
     if (temperatures.i >= TEMPERATURE_SAMPLES) temperatures.i = 0;
@@ -257,7 +263,7 @@ int main() {
         //lcd_string(tmps1);
 
         if((msg_time + 10 * 1000000) <= time_us_64()) {
-            sprintf(tmps1, "s: %3d h: %3d hr: %3d w: %3d sm: %3d st:%d\n", temperatures.stove_avr, temperatures.heating_avr, temperatures.heating_return_avr, temperatures.water_avr, temperatures.smoke_avr, stove_state);
+            sprintf(tmps1, "s: %3d h: %3d hr: %3d w: %3d sm: %3d f:%3d st:%d\n", temperatures.stove_avr, temperatures.heating_avr, temperatures.heating_return_avr, temperatures.water_avr, temperatures.smoke_avr, temperatures.feeder_avr, stove_state);
             uart_puts(UART_ID, tmps1);
             msg_time = time_us_64();
         }
