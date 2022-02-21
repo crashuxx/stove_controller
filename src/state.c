@@ -17,7 +17,7 @@ stove_state_t update_state(stove_state_t state, temperatures_t temps) {
             return EXCTINCTION;
         }
 
-        if (temps.stove_avr >= 86) {
+        if (temps.stove_avr >= 82) {
             return COOLING;
         }
         return BURNING;
@@ -26,7 +26,7 @@ stove_state_t update_state(stove_state_t state, temperatures_t temps) {
         if (temps.stove_avr <= 74) {
             return BURNING;
         }
-        if (temps.stove_avr <= 84) {
+        if (temps.stove_avr <= 80) {
             return PASSIVE;
         }
 
@@ -36,7 +36,7 @@ stove_state_t update_state(stove_state_t state, temperatures_t temps) {
         if (temps.stove_avr <= 74) {
             return BURNING;
         }
-        if (temps.stove_avr >= 86) {
+        if (temps.stove_avr >= 82) {
             return COOLING;
         }
 

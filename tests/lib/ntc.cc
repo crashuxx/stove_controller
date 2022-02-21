@@ -5,8 +5,10 @@
 namespace {
 
 TEST(NTC10k, ntc10k_b3900k_temperature) {
+    EXPECT_LT(ntc10k_b3900k_temperature(328997), -40);
     EXPECT_EQ(-40, ntc10k_b3900k_temperature(328996));
     EXPECT_EQ(125, ntc10k_b3900k_temperature(358));
+    EXPECT_GT(ntc10k_b3900k_temperature(357), 125);
     
     EXPECT_EQ(-5, ntc10k_b3900k_temperature(41813));
     EXPECT_EQ(0, ntc10k_b3900k_temperature(32330));

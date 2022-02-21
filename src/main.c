@@ -111,16 +111,16 @@ int main() {
 
     gpio_init(12);
     gpio_set_dir(12, GPIO_OUT);
-    gpio_put(12, 1);
+    gpio_put(12, 0);
     gpio_init(13);
     gpio_set_dir(13, GPIO_OUT);
-    gpio_put(13, 1);
+    gpio_put(13, 0);
     gpio_init(14);
     gpio_set_dir(14, GPIO_OUT);
-    gpio_put(14, 1);
+    gpio_put(14, 0);
     gpio_init(15);
     gpio_set_dir(15, GPIO_OUT);
-    gpio_put(15, 1);
+    gpio_put(15, 0);
 
     memset(&temperatures, 0, sizeof(temperatures));
 
@@ -165,22 +165,28 @@ int main() {
             case EXCTINCTION:
                 //gpio_put(12, 1);
                 feeder_state = false;
-                gpio_put(13, 1);
-                gpio_put(14, 1); //co pump
-                gpio_put(15, 1); //cw pump
+                gpio_put(13, 0);
+                //gpio_put(14, 0); //co pump
+                gpio_put(15, 0); //cw pump
+
+                if (temperatures.heating_avr > 60) {
+                    gpio_put(14, 1); //co pump
+                } else {
+                    gpio_put(14, 0); //co pump
+                }
                 break;
 
             case SETTING_FIRE:
-                gpio_put(13, 0); // fan
-                gpio_put(14, 1); //co pump
-                gpio_put(15, 1);
+                gpio_put(13, 1); // fan
+                gpio_put(14, 0); //co pump
+                gpio_put(15, 0);
 
                 if (feeder_state) {
-                    if ((feeder_time + 4 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 6 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 4 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 6 * 1000000 + 25 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
@@ -189,44 +195,44 @@ int main() {
                 break;
 
             case BURNING:
-                gpio_put(13, 0); // fan
-                gpio_put(14, 0); //co pump
+                gpio_put(13, 1); // fan
+                gpio_put(14, 1); //co pump
 
                 if (feeder_state) {
-                    if ((feeder_time + 8 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 5 * 1000000) <= time_us_64()) {
                         feeder_state = false;
                     }
                 } else {
-                    if ((feeder_time + 8 * 1000000 + 30 * 1000000) <= time_us_64()) {
+                    if ((feeder_time + 5 * 1000000 + 22 * 1000000) <= time_us_64()) {
                         feeder_state = true;
                         feeder_time = time_us_64();
                     }
                 }
 
                 if (temperatures.water_avr < 42) {
-                    gpio_put(15, 0); //cw pump
-                } else {
                     gpio_put(15, 1); //cw pump
+                } else {
+                    gpio_put(15, 0); //cw pump
                 }
 
                 break;
 
             case COOLING:
                 feeder_state = false;
-                gpio_put(13, 1); // fan
-                gpio_put(14, 0); //co pump
+                gpio_put(13, 0); // fan
+                gpio_put(14, 1); //co pump
 
                 if (temperatures.water_avr < 42) {
-                    gpio_put(15, 0); //cw pump
-                } else {
                     gpio_put(15, 1); //cw pump
+                } else {
+                    gpio_put(15, 0); //cw pump
                 }
 
                 break;
             
             case PASSIVE:
-                gpio_put(13, 1); // fan
-                gpio_put(14, 0); //co pump
+                gpio_put(13, 0); // fan
+                gpio_put(14, 1); //co pump
 
                 if (feeder_state) {
                     if ((feeder_time + 10 * 1000000) <= time_us_64()) {
@@ -240,16 +246,16 @@ int main() {
                 }
 
                 if (temperatures.water_avr < 42) {
-                    gpio_put(15, 0); //cw pump
-                } else {
                     gpio_put(15, 1); //cw pump
+                } else {
+                    gpio_put(15, 0); //cw pump
                 }
 
                 break;
 
         }
 
-        gpio_put(12, !feeder_state);
+        gpio_put(12, feeder_state);
 
         char tmps1[128];
         //char tmps2[16];
